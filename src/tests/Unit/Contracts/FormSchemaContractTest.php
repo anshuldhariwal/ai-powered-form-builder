@@ -1,6 +1,9 @@
 <?php
 
 use Opis\JsonSchema\Validator;
+use Tests\TestCase;
+
+uses(TestCase::class);
 
 function contractJson(string $relativePath): object
 {

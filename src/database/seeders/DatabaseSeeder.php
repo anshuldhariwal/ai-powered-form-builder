@@ -2,24 +2,38 @@
 
 namespace Database\Seeders;
 
+use App\Enums\TenantRole;
+use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Services\Forms\FormService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $user = User::firstOrCreate(
+            ['email' => 'demo@formforge.test'],
+            ['name' => 'Demo User', 'password' => Hash::make(env('DEMO_PASSWORD', 'password'))],
+        );
+        $tenant = Tenant::firstOrCreate(
+            ['slug' => 'formforge-demo'],
+            ['name' => 'FormForge Demo'],
+        );
+        $tenant->users()->syncWithoutDetaching([$user->id => ['role' => TenantRole::Owner->value]]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if ($tenant->forms()->doesntExist()) {
+            $service = app(FormService::class);
+            foreach (['internship-application.json', 'customer-feedback.json'] as $fixture) {
+                $contents = file_get_contents(base_path('../contracts/examples/'.$fixture));
+                $schema = json_decode($contents ?: '', true, 512, JSON_THROW_ON_ERROR);
+                $form = $service->create($tenant, $user, $schema);
+                $service->publish($form);
+            }
+        }
     }
 }

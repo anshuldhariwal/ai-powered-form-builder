@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
 #[Fillable(['name', 'slug'])]
@@ -33,5 +34,11 @@ class Tenant extends Model
             ->using(TenantMembership::class)
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    /** @return HasMany<Form, $this> */
+    public function forms(): HasMany
+    {
+        return $this->hasMany(Form::class);
     }
 }

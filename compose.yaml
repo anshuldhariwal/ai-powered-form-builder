@@ -38,9 +38,11 @@ x-laravel-environment: &laravel-environment
   AI_SERVICE_SECRET: ${AI_SERVICE_SECRET:?Set AI_SERVICE_SECRET in .env}
   AI_SERVICE_MAX_CLOCK_SKEW_SECONDS: ${AI_SERVICE_MAX_CLOCK_SKEW_SECONDS:-300}
   AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-60}
+  DEMO_PASSWORD: ${DEMO_PASSWORD:-password}
 
 x-laravel-volumes: &laravel-volumes
   - ./src:/var/www/html:ro
+  - ./contracts:/var/www/contracts:ro
   - laravel-vendor:/var/www/html/vendor
   - laravel-storage:/var/www/html/storage
   - laravel-bootstrap-cache:/var/www/html/bootstrap/cache

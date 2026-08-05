@@ -1,5 +1,9 @@
 <?php
 
+use Tests\TestCase;
+
+uses(TestCase::class);
+
 it('provides the approved form schema limit defaults', function () {
     expect(config('forms.schema_limits'))->toBe([
         'max_bytes' => 1_048_576,
