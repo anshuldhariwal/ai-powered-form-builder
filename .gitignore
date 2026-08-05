@@ -1,0 +1,34 @@
+# Local orchestration secrets
+/.env
+/.env.*
+!/.env.example
+/ai-service/.env
+/ai-service/.env.*
+!/ai-service/.env.example
+/ai-service/.venv/
+/ai-service/.pytest_cache/
+/ai-service/.mypy_cache/
+/ai-service/.ruff_cache/
+/ai-service/**/__pycache__/
+*.pyc
+
+# Coding-agent artifacts
+/.codex/
+/.claude/
+/.cursor/
+/.aider/
+*.agent.log
+/agent-transcripts/
+/scratch-prompts/
+/tmp-patches/
+
+# Local infrastructure data
+/mysql-data/
+/redis-data/
+/docker-compose.override.yml
+
+# IDE and operating-system files
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
