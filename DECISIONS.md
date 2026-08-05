@@ -1375,6 +1375,48 @@ Append-only records provide complete history and clear rollback semantics. Locki
 - JSON column representation and schema limits.
 - Exact foreign-key deletion behavior for form lifecycle operations.
 
+## Decision 036: Project-Owned Canonical JSON with SHA-256 Checksums
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved and implemented.
+
+**Approved option:** Option A - normalize first, recursively sort object keys, preserve list order, encode with stable JSON flags, and store a lowercase hexadecimal SHA-256 checksum.
+
+**Context**
+
+Append-only version saves must recognize schemas that differ only in formatting or object-key order while continuing to treat builder array order as meaningful.
+
+**Options considered**
+
+- Option A: A small project-owned canonicalizer tailored to the form schema.
+- Option B: Full RFC 8785/JCS through another Composer dependency.
+- Option C: Hash the incoming JSON encoding directly.
+
+**Rationale**
+
+Recursive object-key sorting and stable encoding cover the product's equality requirements without another dependency. Preserving list order ensures reordered steps, sections, fields, options, and conditions create new versions.
+
+**Accepted trade-offs**
+
+- The representation is project-specific rather than RFC 8785.
+- Empty PHP arrays are treated as JSON lists; empty objects must be represented as objects before canonicalization if the schema introduces them.
+- Checksums identify canonical content but are not cryptographic signatures.
+
+**Consequences**
+
+- Canonicalization rejects unsupported PHP values through throwing JSON encoding.
+- Unicode and slashes remain unescaped, insignificant whitespace is removed, and fractional zeroes are preserved.
+- Version checksums use lowercase SHA-256 hexadecimal strings suitable for `CHAR(64)` storage.
+- Shared fixtures must prove compatible behavior in Laravel and FastAPI before cross-service persistence is enabled.
+
+**Follow-up decisions**
+
+- Form schema v1 structure and normalization defaults.
+- JSON storage representation and size limits.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
