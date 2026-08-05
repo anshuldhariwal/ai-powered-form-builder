@@ -6,15 +6,19 @@ use App\Jobs\ParseFormImport;
 use App\Models\FormImport;
 use App\Services\Forms\FormService;
 use App\Services\Tenancy\CurrentTenant;
+use App\Services\Tenancy\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class FormImportController extends Controller
 {
+    public function __construct(private readonly TenantAccess $access) {}
+
     public function store(Request $request, CurrentTenant $currentTenant): JsonResponse
     {
         $data = $request->validate(['file' => ['required', 'file', 'max:10240', 'mimes:docx,xlsx']]);
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $file = $data['file'];
         $path = $file->store("imports/{$tenant->id}", 'local');
         $import = FormImport::create(['tenant_id' => $tenant->id, 'user_id' => $request->user()->id, 'status' => 'queued', 'disk' => 'local', 'path' => $path, 'original_name' => $file->getClientOriginalName()]);
@@ -33,6 +37,7 @@ class FormImportController extends Controller
     public function commit(Request $request, string $importId, CurrentTenant $currentTenant, FormService $forms): JsonResponse
     {
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $import = FormImport::where('tenant_id', $tenant->id)->where('public_id', $importId)->where('status', 'ready')->firstOrFail();
         $data = $request->validate(['schema' => ['nullable', 'array']]);
         /** @var array<string, mixed> $schema */

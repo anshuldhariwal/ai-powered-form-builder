@@ -71,3 +71,32 @@ it('serves only published forms and stores submissions against the published ver
     expect($fresh->submissions)->toHaveCount(1)
         ->and($fresh->submissions->first()->form_version_id)->toBe($fresh->published_version_id);
 });
+
+it('unpublishes archives and restores forms without losing versions', function () {
+    [$user, $tenant] = userWithTenant();
+    $service = app(FormService::class);
+    $form = $service->create($tenant, $user, validFormSchema());
+    $url = "/api/public/forms/{$tenant->slug}/{$form->slug}";
+    $client = $this->actingAs($user)->withSession(['_token' => 'form-lifecycle-token'])
+        ->withHeader('X-CSRF-TOKEN', 'form-lifecycle-token');
+
+    $service->publish($form);
+    $client->postJson("/api/forms/{$form->public_id}/unpublish")
+        ->assertOk()->assertJsonPath('status', 'draft')->assertJsonPath('published_at', null);
+    $this->getJson($url)->assertNotFound();
+
+    $service->publish($form->fresh());
+    $client->postJson("/api/forms/{$form->public_id}/archive")
+        ->assertOk()->assertJsonPath('status', 'archived')->assertJsonPath('published_version_id', null);
+    $this->getJson($url)->assertNotFound();
+
+    $client->putJson("/api/forms/{$form->public_id}", ['schema' => validFormSchema('Blocked edit')])
+        ->assertUnprocessable()->assertJsonValidationErrors('form');
+    $client->postJson("/api/forms/{$form->public_id}/publish")
+        ->assertUnprocessable()->assertJsonValidationErrors('form');
+
+    $client->postJson("/api/forms/{$form->public_id}/restore")
+        ->assertOk()->assertJsonPath('status', 'draft');
+
+    expect($form->versions()->count())->toBe(1);
+});

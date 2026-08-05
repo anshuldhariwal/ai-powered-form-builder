@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\AiFormController;
 use App\Http\Controllers\FormController;
 use App\Http\Controllers\FormImportController;
-use App\Http\Controllers\AiFormController;
 use App\Http\Controllers\PublicFormController;
+use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'app');
@@ -11,12 +13,19 @@ Route::view('/login', 'app')->name('login');
 Route::view('/register', 'app');
 Route::view('/forms/{path?}', 'app')->where('path', '.*');
 Route::view('/f/{tenantSlug}/{formSlug}', 'app');
+Route::view('/invitations/{publicId}', 'app');
 
 Route::get('/auth/user', function () {
     return response()->json(request()->user());
 })->middleware('auth');
 
 Route::middleware('auth')->prefix('api')->group(function () {
+    Route::post('/tenants/{slug}/switch', [TenantController::class, 'switch']);
+    Route::get('/tenant/members', [TenantMemberController::class, 'index']);
+    Route::post('/tenant/invitations', [TenantMemberController::class, 'invite']);
+    Route::patch('/tenant/members/{userId}', [TenantMemberController::class, 'update']);
+    Route::delete('/tenant/members/{userId}', [TenantMemberController::class, 'destroy']);
+    Route::post('/invitations/{publicId}/accept', [TenantMemberController::class, 'accept']);
     Route::post('/forms/ai/generate', [AiFormController::class, 'generate'])->middleware('throttle:10,1');
     Route::post('/imports', [FormImportController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/imports/{importId}', [FormImportController::class, 'show']);
@@ -28,6 +37,9 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::get('/forms/{publicId}', [FormController::class, 'show']);
     Route::put('/forms/{publicId}', [FormController::class, 'update']);
     Route::post('/forms/{publicId}/publish', [FormController::class, 'publish']);
+    Route::post('/forms/{publicId}/unpublish', [FormController::class, 'unpublish']);
+    Route::post('/forms/{publicId}/archive', [FormController::class, 'archive']);
+    Route::post('/forms/{publicId}/restore', [FormController::class, 'restore']);
     Route::post('/forms/{publicId}/ai/edit', [AiFormController::class, 'edit'])->middleware('throttle:10,1');
     Route::get('/forms/{publicId}/versions', [FormController::class, 'versions']);
     Route::post('/forms/{publicId}/versions/{versionNumber}/rollback', [FormController::class, 'rollback']);

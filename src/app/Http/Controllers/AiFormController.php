@@ -6,15 +6,19 @@ use App\Jobs\GenerateAiForm;
 use App\Models\AiRequest;
 use App\Services\Forms\FormService;
 use App\Services\Tenancy\CurrentTenant;
+use App\Services\Tenancy\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AiFormController extends Controller
 {
+    public function __construct(private readonly TenantAccess $access) {}
+
     public function generate(Request $request, CurrentTenant $currentTenant): JsonResponse
     {
         $data = $request->validate(['prompt' => ['required', 'string', 'min:5', 'max:4000']]);
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $aiRequest = AiRequest::create(['tenant_id' => $tenant->id, 'user_id' => $request->user()->id, 'operation' => 'generate', 'prompt' => $data['prompt'], 'status' => 'queued']);
         GenerateAiForm::dispatch($aiRequest->id);
 
@@ -25,6 +29,7 @@ class AiFormController extends Controller
     {
         $data = $request->validate(['prompt' => ['required', 'string', 'min:3', 'max:4000']]);
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $form = $tenant->forms()->where('public_id', $publicId)->with('currentVersion')->firstOrFail();
         $aiRequest = AiRequest::create(['tenant_id' => $tenant->id, 'user_id' => $request->user()->id, 'form_id' => $form->id, 'operation' => 'edit', 'prompt' => $data['prompt'], 'input_schema' => $form->currentVersion->schema_json, 'status' => 'queued']);
         GenerateAiForm::dispatch($aiRequest->id);
@@ -42,6 +47,7 @@ class AiFormController extends Controller
     public function accept(Request $request, string $requestId, CurrentTenant $currentTenant, FormService $forms): JsonResponse
     {
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $aiRequest = AiRequest::where('tenant_id', $tenant->id)->where('public_id', $requestId)->where('status', 'succeeded')->firstOrFail();
         /** @var array<string, mixed> $outputSchema */
         $outputSchema = $aiRequest->output_schema;

@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class FormService
 {
@@ -41,6 +42,7 @@ class FormService
     /** @param array<string, mixed> $schema */
     public function save(Form $form, User $user, array $schema): FormVersion
     {
+        $this->ensureActive($form);
         $this->validator->validate($schema);
         $checksum = $this->canonicalizer->checksum($schema);
 
@@ -62,6 +64,7 @@ class FormService
 
     public function publish(Form $form): Form
     {
+        $this->ensureActive($form);
         $form->update([
             'published_version_id' => $form->current_version_id,
             'status' => FormStatus::Published,
@@ -69,6 +72,47 @@ class FormService
         ]);
 
         return $form->fresh(['publishedVersion']) ?? $form;
+    }
+
+    public function unpublish(Form $form): Form
+    {
+        $this->ensureActive($form);
+        $form->update([
+            'published_version_id' => null,
+            'published_at' => null,
+            'status' => FormStatus::Draft,
+        ]);
+
+        return $form->fresh() ?? $form;
+    }
+
+    public function archive(Form $form): Form
+    {
+        $form->update([
+            'published_version_id' => null,
+            'published_at' => null,
+            'status' => FormStatus::Archived,
+        ]);
+
+        return $form->fresh() ?? $form;
+    }
+
+    public function restore(Form $form): Form
+    {
+        if ($form->status !== FormStatus::Archived) {
+            return $form;
+        }
+
+        $form->update(['status' => FormStatus::Draft]);
+
+        return $form->fresh() ?? $form;
+    }
+
+    private function ensureActive(Form $form): void
+    {
+        if ($form->status === FormStatus::Archived) {
+            throw ValidationException::withMessages(['form' => 'Restore this form before editing or publishing it.']);
+        }
     }
 
     /** @param array<string, mixed> $schema */

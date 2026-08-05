@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Form;
 use App\Services\Forms\FormService;
 use App\Services\Tenancy\CurrentTenant;
+use App\Services\Tenancy\TenantAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,18 +13,22 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormController extends Controller
 {
+    public function __construct(private readonly TenantAccess $access) {}
+
     public function index(Request $request, CurrentTenant $currentTenant): JsonResponse
     {
         $tenant = $currentTenant->forUser($request->user());
         $forms = $tenant->forms()->with('currentVersion:id,form_id,version_number')->latest('updated_at')->get();
+        $tenants = $request->user()->tenants()->orderBy('tenants.name')->get(['tenants.id', 'tenants.name', 'tenants.slug']);
 
-        return response()->json(['tenant' => $tenant, 'forms' => $forms]);
+        return response()->json(['tenant' => $tenant, 'current_role' => $this->access->role($request->user(), $tenant), 'tenants' => $tenants, 'forms' => $forms]);
     }
 
     public function store(Request $request, CurrentTenant $currentTenant, FormService $service): JsonResponse
     {
         $data = $request->validate(['schema' => ['required', 'array']]);
         $tenant = $currentTenant->forUser($request->user());
+        $this->access->requireManager($request->user(), $tenant);
         $form = $service->create($tenant, $request->user(), $data['schema']);
 
         return response()->json($form, 201);
@@ -32,13 +37,15 @@ class FormController extends Controller
     public function show(Request $request, string $publicId, CurrentTenant $currentTenant): JsonResponse
     {
         $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $form->load(['tenant', 'currentVersion', 'publishedVersion']);
 
-        return response()->json($form->load(['tenant', 'currentVersion', 'publishedVersion']));
+        return response()->json([...$form->toArray(), 'current_role' => $this->access->role($request->user(), $form->tenant)]);
     }
 
     public function update(Request $request, string $publicId, CurrentTenant $currentTenant, FormService $service): JsonResponse
     {
         $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
         $data = $request->validate(['schema' => ['required', 'array']]);
         $version = $service->save($form, $request->user(), $data['schema']);
 
@@ -47,7 +54,34 @@ class FormController extends Controller
 
     public function publish(Request $request, string $publicId, CurrentTenant $currentTenant, FormService $service): JsonResponse
     {
-        return response()->json($service->publish($this->ownedForm($request, $publicId, $currentTenant)));
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
+
+        return response()->json($service->publish($form));
+    }
+
+    public function unpublish(Request $request, string $publicId, CurrentTenant $currentTenant, FormService $service): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
+
+        return response()->json($service->unpublish($form));
+    }
+
+    public function archive(Request $request, string $publicId, CurrentTenant $currentTenant, FormService $service): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
+
+        return response()->json($service->archive($form));
+    }
+
+    public function restore(Request $request, string $publicId, CurrentTenant $currentTenant, FormService $service): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
+
+        return response()->json($service->restore($form));
     }
 
     public function submissions(Request $request, string $publicId, CurrentTenant $currentTenant): JsonResponse
@@ -116,6 +150,7 @@ class FormController extends Controller
     public function rollback(Request $request, string $publicId, int $versionNumber, CurrentTenant $currentTenant, FormService $service): JsonResponse
     {
         $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $this->access->requireManager($request->user(), $form->tenant);
         $source = $form->versions()->where('version_number', $versionNumber)->firstOrFail();
         $version = $service->save($form, $request->user(), $source->schema_json);
 

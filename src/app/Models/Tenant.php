@@ -41,4 +41,10 @@ class Tenant extends Model
     {
         return $this->hasMany(Form::class);
     }
+
+    /** @return HasMany<TenantInvitation, $this> */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TenantInvitation::class);
+    }
 }

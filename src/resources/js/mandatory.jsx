@@ -67,6 +67,7 @@ export function MandatoryBuilder({ publicId }) {
     const step = schema?.steps[stepIndex];
     const section = step?.sections[sectionIndex];
     const fields = section?.fields ?? [];
+    const canManage = ['owner', 'editor'].includes(form?.current_role);
 
     function commit(next) {
         setSchema(next);
@@ -107,6 +108,22 @@ export function MandatoryBuilder({ publicId }) {
     async function publish() {
         setError('');
         try { const value = await api(`/api/forms/${publicId}/publish`, { method: 'POST' }); setForm({ ...form, ...value }); setNotice('Published'); }
+        catch (issue) { setError(issue.message); }
+    }
+    async function unpublish() {
+        setError('');
+        try { const value = await api(`/api/forms/${publicId}/unpublish`, { method: 'POST' }); setForm({ ...form, ...value }); setNotice('Unpublished'); }
+        catch (issue) { setError(issue.message); }
+    }
+    async function archive() {
+        if (!window.confirm('Archive this form? Its public link will stop working.')) return;
+        setError('');
+        try { await api(`/api/forms/${publicId}/archive`, { method: 'POST' }); window.location.assign('/'); }
+        catch (issue) { setError(issue.message); }
+    }
+    async function restore() {
+        setError('');
+        try { const value = await api(`/api/forms/${publicId}/restore`, { method: 'POST' }); setForm({ ...form, ...value }); setNotice('Restored as a draft'); }
         catch (issue) { setError(issue.message); }
     }
     async function editWithAi() {
@@ -153,8 +170,7 @@ export function MandatoryBuilder({ publicId }) {
                 <button disabled={aiBusy} onClick={editWithAi} className="rounded-lg border border-cyan-500 px-3 py-2 text-cyan-300">{aiBusy ? 'AI working…' : 'Edit with AI'}</button>
                 <button onClick={showVersions} className="rounded-lg border border-slate-700 px-3 py-2">Versions</button>
                 <button onClick={() => setMode(mode === 'json' ? 'builder' : 'json')} className="rounded-lg border border-slate-700 px-3 py-2">{mode === 'json' ? 'Builder' : 'JSON'}</button>
-                <button onClick={save} className="rounded-lg bg-slate-700 px-4 py-2 font-bold">Save draft</button>
-                <button onClick={publish} className="rounded-lg bg-cyan-400 px-4 py-2 font-bold text-slate-950">Publish</button>
+                {form?.status === 'archived' ? <button onClick={restore} className="rounded-lg bg-cyan-400 px-4 py-2 font-bold text-slate-950">Restore</button> : <><button onClick={save} className="rounded-lg bg-slate-700 px-4 py-2 font-bold">Save draft</button>{form?.status === 'published' && <button onClick={unpublish} className="rounded-lg border border-amber-400 px-4 py-2 font-bold text-amber-300">Unpublish</button>}<button onClick={publish} className="rounded-lg bg-cyan-400 px-4 py-2 font-bold text-slate-950">Publish</button><button onClick={archive} className="rounded-lg border border-rose-500 px-3 py-2 text-rose-300">Archive</button></>}
             </div>
         </header>
         <div className="mx-auto grid max-w-[1500px] gap-5 p-5 lg:grid-cols-[250px_1fr]">
@@ -168,13 +184,14 @@ export function MandatoryBuilder({ publicId }) {
             <section>
                 {error && <p className="mb-3 rounded-lg bg-rose-950 p-3 text-rose-300">{error}</p>}{notice && <p className="mb-3 text-emerald-400">{notice}</p>}
                 {mode === 'responses' && <Responses publicId={publicId} responses={responses} search={search} setSearch={setSearch} reload={loadResponses} close={() => setMode('builder')} />}
-                {mode === 'json' && <textarea className="min-h-[75vh] w-full rounded-2xl bg-slate-900 p-5 font-mono text-sm" value={rawText} onChange={(event) => applyRaw(event.target.value)} />}
-                {mode === 'builder' && <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                {!canManage && <p className="mb-3 rounded-lg bg-slate-900 p-3 text-slate-400">Read-only workspace access. Changes cannot be saved.</p>}
+                {mode === 'json' && <textarea readOnly={!canManage} className="min-h-[75vh] w-full rounded-2xl bg-slate-900 p-5 font-mono text-sm" value={rawText} onChange={(event) => applyRaw(event.target.value)} />}
+                {mode === 'builder' && <fieldset disabled={!canManage} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 disabled:opacity-80">
                     <input value={step.title} onChange={(event) => patchStep({ title: event.target.value })} className="w-full bg-transparent text-2xl font-bold outline-none" />
                     <input value={section.title} onChange={(event) => patchSection({ title: event.target.value })} className="w-full bg-transparent text-lg font-semibold text-cyan-200 outline-none" />
                     {fields.map((field, index) => <FieldEditor key={field.id} field={field} index={index} patch={(values) => patchField(index, values)} patchValidation={(values) => patchValidation(index, values)} move={move} duplicate={() => updateFields([...fields.slice(0, index + 1), cloneField(field), ...fields.slice(index + 1)])} remove={() => updateFields(fields.filter((_, position) => position !== index))} onDragStart={() => setDragIndex(index)} onDrop={() => { if (dragIndex !== null) move(dragIndex, index); setDragIndex(null); }} />)}
                     {fields.length === 0 && <p className="py-16 text-center text-slate-400">Choose a field type to start building.</p>}
-                </div>}
+                </fieldset>}
             </section>
         </div>
     </main>;
