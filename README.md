@@ -1,8 +1,10 @@
 # FormForge AI
 
-**Live demo:** Deployment pending
+**Live demo:** <https://web-production-99ad.up.railway.app>
 
-**Demo login:** `demo@formforge.test` / password configured through `DEMO_PASSWORD` (`password` in local Docker only)
+**Demo login:** `demo@formforge.test` / `FormForgeDemo2026!`
+
+**Published examples:** [Internship application](https://web-production-99ad.up.railway.app/f/formforge-demo/internship-application) · [Customer feedback](https://web-production-99ad.up.railway.app/f/formforge-demo/customer-feedback)
 
 **Repository:** <https://github.com/anshuldhariwal/ai-powered-form-builder>
 
@@ -135,7 +137,7 @@ QUEUE_CONNECTION=sync
 DEMO_PASSWORD=<intentional-public-demo-password>
 ```
 
-Generate a public domain in Railway networking after deployment. `railway.json` runs migrations and the idempotent demo seeder before release and checks `/up` for readiness.
+Generate a public domain in Railway networking after deployment. `railway.json` runs migrations before release and checks `/up` for readiness; the production container runs the idempotent demo seed before Apache starts.
 
 ## Known limitations / unfinished work
 
