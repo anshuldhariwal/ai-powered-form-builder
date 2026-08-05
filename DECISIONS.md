@@ -1285,6 +1285,51 @@ Immutable scoped slugs keep published URLs readable and stable without introduci
 - Form/version table relationship.
 - Public route binding and publication behavior.
 
+## Decision 034: Separate Current and Published Form-Version Pointers
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; implementation pending immutable-version and schema-storage decisions.
+
+**Approved option:** Option A - each version belongs to one form, while the form stores separate nullable `current_version_id` and `published_version_id` pointers.
+
+**Context**
+
+The builder must support revising a form that is already live without silently changing the schema respondents receive. Submissions must also retain the exact immutable version against which they were validated.
+
+**Options considered**
+
+- Option A: Separate current and published version pointers on the form.
+- Option B: One current-version pointer used by both editing and public rendering.
+- Option C: Current and published flags stored on version rows.
+
+**Rationale**
+
+Two explicit pointers make publication a transactionally controlled state change. Editors may create a newer current draft while public rendering continues to use the previously published version.
+
+**Accepted trade-offs**
+
+- Forms carry two nullable foreign keys and require explicit state invariants.
+- Creating a form and its first version must be transactional because the current pointer is temporarily null.
+- Publication and rollback services must update pointers consistently.
+
+**Consequences**
+
+- `form_versions.form_id` identifies version ownership.
+- `forms.current_version_id` identifies the newest editor-visible version.
+- `forms.published_version_id` identifies the only schema eligible for public rendering.
+- Draft forms have no published pointer.
+- Public submissions will reference the precise published version used for validation.
+
+**Follow-up decisions**
+
+- Immutable version behavior.
+- Canonical JSON and checksum approach.
+- JSON representation and size limits.
+- Publication, unpublication, and rollback state transitions.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
