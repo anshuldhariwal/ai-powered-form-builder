@@ -1330,6 +1330,51 @@ Two explicit pointers make publication a transactionally controlled state change
 - JSON representation and size limits.
 - Publication, unpublication, and rollback state transitions.
 
+## Decision 035: Append-Only Transactional Form Versions
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; implementation pending canonical JSON, checksum, and schema-storage decisions.
+
+**Approved option:** Option A - every meaningful schema save creates an immutable version through `FormVersionService`, with row locking, sequential numbering, checksum no-op detection, and transactional current-pointer updates.
+
+**Context**
+
+The approved dual-pointer model requires predictable version creation under concurrent edits and must preserve every schema that was previously current or published. The acceptance criteria also require identical saves to avoid duplicate versions.
+
+**Options considered**
+
+- Option A: Append-only versions enforced through a service, transaction, row lock, model guards, and restrictive foreign keys.
+- Option B: Update the latest draft in place until it is published or superseded.
+- Option C: Append-only versions enforced with MySQL database triggers.
+
+**Rationale**
+
+Append-only records provide complete history and clear rollback semantics. Locking the parent form serializes version-number allocation, while checksum comparison avoids inserting versions for semantically identical schemas.
+
+**Accepted trade-offs**
+
+- Meaningful edits create additional rows.
+- Eloquent lifecycle guards do not protect against privileged raw SQL; application writes must use the version service.
+- Concurrent saves serialize briefly on the form row.
+
+**Consequences**
+
+- `FormVersionService` is the only supported schema persistence boundary.
+- It validates, normalizes, canonicalizes, and checksums before opening the write transaction.
+- Inside the transaction it locks the form, returns the current version for a checksum match, or inserts the next sequential version and updates `current_version_id`.
+- Version models reject updates and deletes.
+- Foreign keys restrict deletion when a form pointer or submission references a version.
+- Tests must cover no-op saves, immutability, rollback on failure, and concurrent numbering.
+
+**Follow-up decisions**
+
+- Canonical JSON and checksum approach.
+- JSON column representation and schema limits.
+- Exact foreign-key deletion behavior for form lifecycle operations.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
