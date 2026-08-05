@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 #[Fillable(['form_id', 'form_version_id', 'data_json', 'search_text', 'submitted_at'])]
@@ -32,5 +33,11 @@ class FormSubmission extends Model
     public function version(): BelongsTo
     {
         return $this->belongsTo(FormVersion::class, 'form_version_id');
+    }
+
+    /** @return HasMany<SubmissionFile, $this> */
+    public function files(): HasMany
+    {
+        return $this->hasMany(SubmissionFile::class);
     }
 }

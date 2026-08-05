@@ -7,6 +7,7 @@ use App\Services\Forms\FormService;
 use App\Services\Tenancy\CurrentTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormController extends Controller
@@ -64,7 +65,16 @@ class FormController extends Controller
     {
         $form = $this->ownedForm($request, $publicId, $currentTenant);
 
-        return response()->json($form->submissions()->with('version:id,version_number')->where('public_id', $submissionId)->firstOrFail());
+        return response()->json($form->submissions()->with(['version:id,version_number', 'files:id,public_id,form_submission_id,field_key,original_name,mime_type,size_bytes'])->where('public_id', $submissionId)->firstOrFail());
+    }
+
+    public function download(Request $request, string $publicId, string $submissionId, string $fileId, CurrentTenant $currentTenant): StreamedResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $submission = $form->submissions()->where('public_id', $submissionId)->firstOrFail();
+        $file = $submission->files()->where('public_id', $fileId)->firstOrFail();
+
+        return Storage::disk($file->disk)->download($file->path, $file->original_name, ['Content-Type' => $file->mime_type]);
     }
 
     public function export(Request $request, string $publicId, CurrentTenant $currentTenant): StreamedResponse
