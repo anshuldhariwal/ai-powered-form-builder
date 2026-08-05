@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +10,12 @@ class Settings(BaseSettings):
     port: int = 8000
     ai_service_secret: str = ""
     ai_service_max_clock_skew_seconds: int = 300
+    form_max_schema_bytes: int = Field(default=1_048_576, gt=0)
+    form_max_steps: int = Field(default=20, gt=0)
+    form_max_sections_per_step: int = Field(default=30, gt=0)
+    form_max_fields: int = Field(default=150, gt=0)
+    form_max_options_per_field: int = Field(default=100, gt=0)
+    form_max_conditions: int = Field(default=300, ge=0)
     llm_provider: str = ""
     llm_model: str = ""
     llm_api_key: str = ""

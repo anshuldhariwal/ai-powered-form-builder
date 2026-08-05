@@ -1461,6 +1461,57 @@ A fully explicit schema makes the shared JSON Schema the authoritative contract 
 - JSON column representation and maximum persisted size.
 - Field-key and stable-ID generation behavior.
 
+## Decision 038: Native JSON Storage with Bounded Schema Resources
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; shared configuration implemented, with persistence and enforcement pending the form-version service.
+
+**Approved option:** Option A - store normalized schemas in native MySQL JSON and enforce configurable aggregate limits before persistence in both Laravel and FastAPI.
+
+**Context**
+
+The strict contract bounds individual strings but does not bound total document size or aggregate collections. Unbounded client or AI output could consume excessive validation, rendering, storage, and network resources.
+
+**Options considered**
+
+- Option A: Native MySQL JSON with configurable application-level resource limits.
+- Option B: LONGTEXT containing canonical JSON.
+- Option C: Relational step, section, field, and option tables.
+
+**Rationale**
+
+Native JSON preserves the single-document source of truth and gives database-level JSON validity. Explicit application limits bound work before persistence and can be mirrored across both services.
+
+**Approved defaults**
+
+- Canonical JSON bytes: 1,048,576 (1 MiB).
+- Steps: 20.
+- Sections per step: 30.
+- Fields per form: 150.
+- Options per field: 100.
+- Conditions per form: 300.
+
+**Accepted trade-offs**
+
+- Arbitrary field-level SQL querying is not optimized.
+- Environment values must remain synchronized between Laravel and FastAPI deployments.
+- Increasing limits can increase request, AI, validation, rendering, and storage costs.
+
+**Consequences**
+
+- `form_versions.schema_json` uses MySQL's native JSON type.
+- Laravel and FastAPI expose the same named settings and defaults.
+- The semantic validator rejects over-limit schemas before canonical persistence.
+- Tests must cover every exact boundary and its first rejected value.
+
+**Follow-up decisions**
+
+- Semantic validation compatibility rules and error representation.
+- Form/version migrations and persistence service.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
