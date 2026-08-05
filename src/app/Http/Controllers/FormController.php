@@ -106,6 +106,22 @@ class FormController extends Controller
         }, $form->slug.'-responses.csv', ['Content-Type' => 'text/csv']);
     }
 
+    public function versions(Request $request, string $publicId, CurrentTenant $currentTenant): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+
+        return response()->json($form->versions()->with('creator:id,name')->latest('version_number')->get(['id', 'form_id', 'version_number', 'schema_checksum', 'created_by', 'created_at']));
+    }
+
+    public function rollback(Request $request, string $publicId, int $versionNumber, CurrentTenant $currentTenant, FormService $service): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $source = $form->versions()->where('version_number', $versionNumber)->firstOrFail();
+        $version = $service->save($form, $request->user(), $source->schema_json);
+
+        return response()->json(['form' => $form->fresh(), 'version' => $version]);
+    }
+
     private function ownedForm(Request $request, string $publicId, CurrentTenant $currentTenant): Form
     {
         $tenant = $currentTenant->forUser($request->user());

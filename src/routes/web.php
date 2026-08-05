@@ -29,6 +29,8 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::put('/forms/{publicId}', [FormController::class, 'update']);
     Route::post('/forms/{publicId}/publish', [FormController::class, 'publish']);
     Route::post('/forms/{publicId}/ai/edit', [AiFormController::class, 'edit'])->middleware('throttle:10,1');
+    Route::get('/forms/{publicId}/versions', [FormController::class, 'versions']);
+    Route::post('/forms/{publicId}/versions/{versionNumber}/rollback', [FormController::class, 'rollback']);
     Route::get('/forms/{publicId}/submissions', [FormController::class, 'submissions']);
     Route::get('/forms/{publicId}/submissions/export', [FormController::class, 'export']);
     Route::get('/forms/{publicId}/submissions/{submissionId}', [FormController::class, 'submission']);

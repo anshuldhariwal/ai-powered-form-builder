@@ -14,6 +14,7 @@ class SubmissionValidator
     {
         $errors = [];
         $allowed = [];
+        $states = $this->fieldStates($schema, $answers);
 
         foreach ($schema['steps'] as $step) {
             foreach ($step['sections'] as $section) {
@@ -26,7 +27,15 @@ class SubmissionValidator
                     $allowed[$key] = true;
                     $value = $answers[$key] ?? null;
                     $empty = $value === null || $value === '' || $value === [];
-                    if ($field['required'] && $empty) {
+                    $state = $states[$field['id']] ?? ['visible' => true, 'required' => $field['required']];
+                    if (! $state['visible']) {
+                        if (! $empty) {
+                            $errors[$key] = "{$field['label']} is hidden and must not be submitted.";
+                        }
+
+                        continue;
+                    }
+                    if ($state['required'] && $empty) {
                         $errors[$key] = "{$field['label']} is required.";
 
                         continue;
@@ -53,6 +62,68 @@ class SubmissionValidator
         }
 
         return array_intersect_key($answers, $allowed);
+    }
+
+    /** @param array<string, mixed> $schema
+     * @param  array<string, mixed>  $answers
+     * @return array<string, array{visible: bool, required: bool}>
+     */
+    private function fieldStates(array $schema, array $answers): array
+    {
+        $states = [];
+        $targets = [];
+        foreach ($schema['steps'] as $step) {
+            $stepFields = [];
+            foreach ($step['sections'] as $section) {
+                $sectionFields = [];
+                foreach ($section['fields'] as $field) {
+                    $sectionFields[] = $field['id'];
+                    $stepFields[] = $field['id'];
+                    $states[$field['id']] = ['visible' => true, 'required' => $field['required']];
+                    $targets[$field['id']] = [$field['id']];
+                }
+                $targets[$section['id']] = $sectionFields;
+            }
+            $targets[$step['id']] = $stepFields;
+        }
+        foreach ($schema['conditions'] as $condition) {
+            if ($condition['action'] === 'show') {
+                foreach ($targets[$condition['target_id']] ?? [] as $fieldId) {
+                    $states[$fieldId]['visible'] = false;
+                }
+            }
+        }
+        foreach ($schema['conditions'] as $condition) {
+            if (! $this->conditionMatches($condition, $answers[$condition['source_field_key']] ?? null)) {
+                continue;
+            }
+            foreach ($targets[$condition['target_id']] ?? [] as $fieldId) {
+                match ($condition['action']) {
+                    'show' => $states[$fieldId]['visible'] = true,
+                    'hide' => $states[$fieldId]['visible'] = false,
+                    'require' => $states[$fieldId]['required'] = true,
+                    'optional' => $states[$fieldId]['required'] = false,
+                    default => null,
+                };
+            }
+        }
+
+        return $states;
+    }
+
+    /** @param array<string, mixed> $condition */
+    private function conditionMatches(array $condition, mixed $actual): bool
+    {
+        return match ($condition['operator']) {
+            'equals' => $actual == $condition['value'],
+            'not_equals' => $actual != $condition['value'],
+            'contains' => str_contains((string) $actual, (string) $condition['value']),
+            'greater_than' => is_numeric($actual) && $actual > $condition['value'],
+            'less_than' => is_numeric($actual) && $actual < $condition['value'],
+            'is_empty' => $actual === null || $actual === '' || $actual === [],
+            'is_not_empty' => $actual !== null && $actual !== '' && $actual !== [],
+            default => false,
+        };
     }
 
     /** @param array<string, mixed> $field */
