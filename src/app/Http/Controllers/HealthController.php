@@ -11,10 +11,10 @@ class HealthController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $checks = [
-            'mysql' => $this->checkMysql(),
-            'redis' => $this->checkRedis(),
-        ];
+        $checks = ['mysql' => $this->checkMysql()];
+        if ($this->redisIsConfigured()) {
+            $checks['redis'] = $this->checkRedis();
+        }
 
         $ready = ! in_array('unavailable', $checks, true);
 
@@ -22,6 +22,15 @@ class HealthController extends Controller
             'status' => $ready ? 'ok' : 'degraded',
             'checks' => $checks,
         ], $ready ? 200 : 503);
+    }
+
+    private function redisIsConfigured(): bool
+    {
+        return in_array('redis', [
+            config('cache.default'),
+            config('queue.default'),
+            config('session.driver'),
+        ], true);
     }
 
     private function checkMysql(): string
