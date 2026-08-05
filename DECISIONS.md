@@ -1201,6 +1201,48 @@ Three fixed roles provide clear administrative, editing, and read-only boundarie
 - Active-tenant selection and context storage.
 - Concrete policies as tenant-owned resources are introduced.
 
+## Decision 032: Bigint Internal Keys with ULID Public Identifiers
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved and applied to the tenant and membership foundation; public identifiers will be added with externally addressable resources.
+
+**Approved option:** Option A - retain unsigned bigint internal primary and foreign keys and add immutable ULID `public_id` values only to externally addressable domain records.
+
+**Context**
+
+The Laravel user and framework tables already use bigint primary keys. The tenant foundation and later form-domain migrations require a consistent relationship-key strategy, while public routes and asynchronous request polling must not expose sequential database identifiers.
+
+**Options considered**
+
+- Option A: Bigint internal keys with ULID public identifiers on externally addressable records.
+- Option B: ULID primary keys on every domain table.
+- Option C: Bigint internal keys with UUIDv7 public identifiers.
+
+**Rationale**
+
+Bigint keys keep MySQL joins, foreign keys, and composite indexes compact and remain consistent with users. ULIDs provide immutable, non-sequential, time-sortable public identifiers without enlarging every internal relationship.
+
+**Accepted trade-offs**
+
+- Externally addressable models have separate internal and public identities.
+- Route binding and serialization must deliberately select the public identifier.
+- Public identifiers reduce enumeration risk but never replace authorization.
+
+**Consequences**
+
+- Tenants, memberships, versions, and submission files use bigint internal relationships.
+- Forms, submissions, AI requests, and imports receive unique 26-character ULID `public_id` columns when introduced.
+- Tenants are presented through their approved slug strategy.
+- Internal numeric identifiers must not appear in public product URLs or external API payloads.
+
+**Follow-up decisions**
+
+- Form slug and public URL uniqueness.
+- Route model binding and serialization details when public endpoints are introduced.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
