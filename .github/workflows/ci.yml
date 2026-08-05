@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      APP_DEBUG: false
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: formforge_test
+      DB_USERNAME: formforge
+      DB_PASSWORD: formforge_test
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "null"
+      SESSION_DRIVER: array
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      AI_SERVICE_SECRET: ci-shared-secret
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: formforge_test
+          MYSQL_USER: formforge
+          MYSQL_PASSWORD: formforge_test
+          MYSQL_ROOT_PASSWORD: formforge_root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: bcmath, dom, gd, intl, mbstring, pcntl, pdo_mysql, redis, simplexml, xml, xmlreader, xmlwriter, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Audit PHP dependencies
+        run: composer audit --locked --no-interaction
+
+      - name: Check PHP formatting
+        run: vendor/bin/pint --test
+
+      - name: Run PHP static analysis
+        run: composer analyse
+
+      - name: Verify MySQL connectivity
+        run: php artisan migrate --force
+
+      - name: Verify Redis connectivity
+        run: >-
+          php -r "\$redis = new Redis(); \$redis->connect('127.0.0.1', 6379);
+          exit(\$redis->ping() ? 0 : 1);"
+
+      - name: Run Laravel tests
+        run: composer test
+
+  frontend:
+    name: React
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify frontend dependency imports
+        run: npm run check:dependencies
+
+      - name: Lint React application
+        run: npm run lint
+
+      - name: Build React application
+        run: npm run build
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: 0.9.30
+          enable-cache: true
+          cache-dependency-glob: ai-service/uv.lock
+
+      - name: Install Python and dependencies
+        run: uv sync --frozen --dev
+
+      - name: Check Python formatting and lint
+        run: uv run ruff check .
+
+      - name: Run Python type checking
+        run: uv run mypy app tests
+
+      - name: Run Python tests
+        run: uv run pytest
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    env:
+      APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      DB_PASSWORD: formforge_ci
+      DB_ROOT_PASSWORD: formforge_ci_root
+      AI_SERVICE_SECRET: ci-shared-secret
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate Compose model
+        run: docker compose config --quiet
+
+      - name: Build service images
+        run: docker compose build
