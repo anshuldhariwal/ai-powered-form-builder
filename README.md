@@ -16,6 +16,7 @@ FormForge AI is a deadline-focused form-builder MVP built with Laravel 13, React
 - Personal tenant provisioning and tenant-isolated form queries.
 - Twelve field types available from the builder palette.
 - Click-to-add, reorder, rename, require, delete, and raw JSON editing.
+- Drag reorder, duplicate, step/section authoring, choice options, and validation controls.
 - Strict shared JSON Schema contract with valid/invalid fixtures.
 - Semantic limits, unique field keys/IDs, option checks, and regex syntax checks.
 - Append-only form versions with canonical SHA-256 no-op detection.
@@ -24,6 +25,10 @@ FormForge AI is a deadline-focused form-builder MVP built with Laravel 13, React
 - Public rendering and server-side required/email/number/choice validation.
 - Submissions tied to the exact published version.
 - Authenticated response list.
+- Response search, pagination, details, private file handling, and streamed CSV export.
+- Queued AI generation/editing with schema validation, preview, explicit acceptance, metadata, and a no-key deterministic fallback.
+- Queued DOCX and both field-definition/header-row XLSX imports with warnings and editable JSON review before commit.
+- Immutable version history/rollback and client/server conditional rules.
 - Two published demo forms from shared fixtures.
 - Dockerized MySQL, Redis, PHP-FPM, Nginx, Horizon, Vite, and FastAPI foundation.
 - Railway-ready production image with precompiled assets and migration/seeding command.
@@ -143,17 +148,15 @@ Generate a public domain in Railway networking after deployment. `railway.json` 
 
 The original assignment scope was intentionally reduced on 2026-08-05 to deliver a stable demonstrable MVP under a one-day deadline.
 
-- Reordering uses accessible up/down controls, not drag-and-drop.
-- The MVP builder edits one step and one section; multi-step rendering/editor controls are unfinished.
-- Choice option editing, duplicate-field action, rich validation controls, archive/unpublish, rollback UI, CSV export, file uploads, conditional logic, and advanced response search are unfinished.
 - The three-role enum exists, but the MVP UI uses the first tenant membership and does not provide tenant switching, invitations, or complete role-policy screens.
-- AI generation/editing is not implemented; only the secured FastAPI boundary exists.
-- DOCX/XLSX imports are not implemented.
-- FastAPI is not part of the reduced Railway MVP deployment.
-- Public submission validation currently covers required, email, number, and select/radio membership; the complete validation matrix remains unfinished.
+- The live demo uses the deterministic AI fallback until `LLM_API_KEY`, `LLM_MODEL`, and optionally `LLM_BASE_URL` are configured; the OpenAI-compatible structured-output provider path is implemented.
+- DOCX parsing intentionally treats paragraphs as candidate questions; complex tables and rich document semantics require manual review.
+- Import review uses an editable JSON confirmation rather than a full spreadsheet-style mapping grid.
+- Archive/unpublish controls and polished schema-diff visualization remain unfinished.
+- Railway local upload storage is ephemeral until a persistent volume or object-storage disk is attached.
 - Automated browser tests and a live walkthrough recording are unfinished.
 
-The completion order after submission is: complete server validation and builder controls, add CSV/file handling, add AI generation, add deterministic imports, then implement advanced Part D features.
+The completion order after submission is: add tenant switching/invitations, replace prompt-based import/version review with dedicated screens, attach durable object storage, then add browser automation and visual polish.
 
 ## Security notes
 

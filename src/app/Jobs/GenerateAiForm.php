@@ -30,7 +30,7 @@ class GenerateAiForm implements ShouldQueue
             $inputSchema = $request->input_schema;
             $schema = $generator->generate($request->prompt, $inputSchema);
             $validator->validate($schema);
-            $request->update(['status' => 'succeeded', 'output_schema' => $schema, 'latency_ms' => (int) ((hrtime(true) - $started) / 1_000_000), 'input_tokens' => str_word_count($request->prompt), 'output_tokens' => str_word_count(json_encode($schema) ?: '')]);
+            $request->update(['status' => 'succeeded', 'output_schema' => $schema, 'provider' => $generator->provider(), 'model' => $generator->model(), 'latency_ms' => (int) ((hrtime(true) - $started) / 1_000_000), 'input_tokens' => str_word_count($request->prompt), 'output_tokens' => str_word_count(json_encode($schema) ?: '')]);
         } catch (Throwable $exception) {
             $request->update(['status' => 'failed', 'error_message' => Str::limit($exception->getMessage(), 1000), 'latency_ms' => (int) ((hrtime(true) - $started) / 1_000_000)]);
             throw $exception;

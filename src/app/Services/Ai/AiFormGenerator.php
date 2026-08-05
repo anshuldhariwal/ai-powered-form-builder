@@ -2,6 +2,7 @@
 
 namespace App\Services\Ai;
 
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class AiFormGenerator
@@ -11,6 +12,9 @@ class AiFormGenerator
      */
     public function generate(string $prompt, ?array $existing = null): array
     {
+        if (config('ai.api_key')) {
+            return $this->providerGenerate($prompt, $existing);
+        }
         if ($existing !== null) {
             return $this->edit($existing, $prompt);
         }
@@ -29,6 +33,34 @@ class AiFormGenerator
         }
 
         return ['schema_version' => '1.0', 'form' => ['title' => $title, 'description' => "Generated from: {$prompt}", 'submit_label' => 'Submit', 'success_message' => 'Thank you for your response.'], 'steps' => [['id' => 'step_generated', 'title' => 'Questions', 'description' => null, 'sections' => [['id' => 'section_generated', 'title' => 'Your details', 'description' => null, 'fields' => $fields]]]], 'conditions' => [], 'settings' => ['show_progress' => true, 'allow_multiple_submissions' => true]];
+    }
+
+    public function provider(): string
+    {
+        return config('ai.api_key') ? (string) config('ai.provider') : 'local';
+    }
+
+    public function model(): string
+    {
+        return config('ai.api_key') ? (string) config('ai.model') : 'deterministic-fallback';
+    }
+
+    /** @param array<string, mixed>|null $existing
+     * @return array<string, mixed>
+     */
+    private function providerGenerate(string $prompt, ?array $existing): array
+    {
+        $instruction = 'Return only one JSON object matching FormForge schema_version 1.0. Preserve stable IDs when editing. Allowed field types: text, textarea, number, email, phone, date, select, radio, checkbox, file, heading, rating.';
+        $response = Http::withToken((string) config('ai.api_key'))->timeout((int) config('ai.timeout'))
+            ->post(config('ai.base_url').'/chat/completions', ['model' => config('ai.model'), 'response_format' => ['type' => 'json_object'], 'messages' => [['role' => 'system', 'content' => $instruction], ['role' => 'user', 'content' => $existing === null ? $prompt : "Existing schema:\n".json_encode($existing)."\nRequested edit:\n{$prompt}"]]])->throw()->json('choices.0.message.content');
+        if (! is_string($response)) {
+            throw new \RuntimeException('The AI provider returned no structured content.');
+        }
+
+        /** @var array<string, mixed> $schema */
+        $schema = json_decode(trim(str_replace(['```json', '```'], '', $response)), true, 512, JSON_THROW_ON_ERROR);
+
+        return $schema;
     }
 
     /** @param array<string, mixed> $schema
