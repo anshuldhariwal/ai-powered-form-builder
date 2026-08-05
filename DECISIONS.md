@@ -1112,6 +1112,95 @@ A single root document minimizes reviewer setup effort and makes operational con
 - Final Compose services, profiles, volumes, and dependencies.
 - Clean-reset and onboarding commands.
 
+## Decision 030: Membership-Only Multi-Tenant Ownership
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; implementation pending dependent identifier and role decisions.
+
+**Approved option:** Option A - model tenants and users as a many-to-many relationship through `tenant_user`, create a personal tenant and initial membership during registration, and derive tenant authority exclusively from membership rather than a separate `owner_user_id`.
+
+**Context**
+
+Milestone 0 established session-authenticated users, but the application has no tenant domain or active-tenant context. Every protected form-domain record must eventually be tenant-scoped, and a user may belong to more than one tenant.
+
+**Options considered**
+
+- Option A: Many-to-many tenant membership without a separate tenant owner foreign key.
+- Option B: Store one `tenant_id` directly on each user.
+- Option C: Many-to-many membership plus a separate `owner_user_id` on tenants.
+
+**Rationale**
+
+A membership-only relationship supports users belonging to multiple tenants and keeps authorization based on one consistent source. It avoids the contradictory states that can arise when a tenant owner foreign key and membership roles are maintained separately.
+
+**Accepted trade-offs**
+
+- Every authenticated tenant-scoped operation must resolve and validate an active membership.
+- Registration must transactionally create both a personal tenant and its initial membership.
+- Tenant switching and future invitations require explicit membership-aware workflows.
+
+**Consequences**
+
+- The domain will contain `tenants` and a unique `tenant_user` membership table.
+- `User` and `Tenant` will expose many-to-many relationships.
+- A newly registered user will receive a personal tenant and initial membership in one transaction.
+- Tenant authorization will not depend on a separate `owner_user_id` column.
+- Identifier types, initial role value and permissions, tenant slug generation, and active-tenant storage remain separate decisions.
+
+**Follow-up decisions**
+
+- Role model and permission boundaries.
+- Primary-key and public-identifier strategy.
+- Tenant slug generation and active-tenant selection behavior.
+- Queue tenant-context restoration.
+
+## Decision 031: Fixed Owner, Editor, and Viewer Roles
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; role semantics implemented, with persistence and policies pending dependent domain decisions.
+
+**Approved option:** Option A - use the fixed `owner`, `editor`, and `viewer` tenant roles.
+
+**Context**
+
+The approved membership-only tenancy model requires every tenant membership to carry an authorization role. The application needs useful least-privilege boundaries without the complexity of a configurable permissions subsystem.
+
+**Options considered**
+
+- Option A: Fixed owner, editor, and viewer roles.
+- Option B: Fixed owner and member roles.
+- Option C: Configurable roles and granular permission records.
+
+**Rationale**
+
+Three fixed roles provide clear administrative, editing, and read-only boundaries while remaining small enough to express through Laravel policies and test exhaustively.
+
+**Accepted trade-offs**
+
+- Tenants cannot define custom roles or permissions.
+- Editors have one consistent product-resource permission set rather than per-feature grants.
+- Viewer access includes reading forms and submissions and exporting submission data.
+
+**Consequences**
+
+- Owners may administer tenant membership and perform all product-resource operations.
+- Editors may create and manage forms, versions, submissions, imports, and AI requests but may not administer the tenant or memberships.
+- Viewers may read forms and submissions and export data but may not mutate tenant resources.
+- New registrations receive an owner membership in their personal tenant.
+- Authorization policies must deny unknown role values and test the complete role matrix.
+
+**Follow-up decisions**
+
+- Primary-key and public-identifier strategy.
+- Active-tenant selection and context storage.
+- Concrete policies as tenant-owned resources are introduced.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
