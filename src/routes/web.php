@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FormController;
+use App\Http\Controllers\FormImportController;
 use App\Http\Controllers\AiFormController;
 use App\Http\Controllers\PublicFormController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,9 @@ Route::get('/auth/user', function () {
 
 Route::middleware('auth')->prefix('api')->group(function () {
     Route::post('/forms/ai/generate', [AiFormController::class, 'generate'])->middleware('throttle:10,1');
+    Route::post('/imports', [FormImportController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/imports/{importId}', [FormImportController::class, 'show']);
+    Route::post('/imports/{importId}/commit', [FormImportController::class, 'commit']);
     Route::get('/ai-requests/{requestId}', [AiFormController::class, 'show']);
     Route::post('/ai-requests/{requestId}/accept', [AiFormController::class, 'accept']);
     Route::get('/forms', [FormController::class, 'index']);
