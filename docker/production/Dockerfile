@@ -17,6 +17,8 @@ RUN apt-get update \
     && docker-php-ext-install -j"$(nproc)" bcmath gd intl pcntl pdo_mysql zip \
     && pecl install redis \
     && docker-php-ext-enable redis \
+    && a2dismod -f mpm_event mpm_worker \
+    && a2enmod mpm_prefork \
     && a2enmod rewrite \
     && sed -ri "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" /etc/apache2/sites-available/*.conf \
     && sed -ri "s!/var/www/!${APACHE_DOCUMENT_ROOT}!g" /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf \
