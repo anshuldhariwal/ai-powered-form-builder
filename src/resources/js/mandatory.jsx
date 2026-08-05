@@ -54,6 +54,7 @@ export function MandatoryBuilder({ publicId }) {
     const [responses, setResponses] = useState(null);
     const [search, setSearch] = useState('');
     const [dragIndex, setDragIndex] = useState(null);
+    const [aiBusy, setAiBusy] = useState(false);
 
     useEffect(() => {
         api(`/api/forms/${publicId}`).then((value) => {
@@ -108,6 +109,18 @@ export function MandatoryBuilder({ publicId }) {
         try { const value = await api(`/api/forms/${publicId}/publish`, { method: 'POST' }); setForm({ ...form, ...value }); setNotice('Published'); }
         catch (issue) { setError(issue.message); }
     }
+    async function editWithAi() {
+        const prompt = window.prompt('Describe the change to make');
+        if (!prompt) return;
+        setAiBusy(true); setError('');
+        try {
+            let request = await api(`/api/forms/${publicId}/ai/edit`, { method: 'POST', body: JSON.stringify({ prompt }) });
+            for (let attempt = 0; attempt < 30 && !['succeeded', 'failed'].includes(request.status); attempt += 1) { await new Promise((resolve) => setTimeout(resolve, 1000)); request = await api(`/api/ai-requests/${request.public_id}`); }
+            if (request.status !== 'succeeded') throw new Error(request.error_message || 'AI edit failed.');
+            if (window.confirm('Apply the generated edit as a new immutable version?')) { const updated = await api(`/api/ai-requests/${request.public_id}/accept`, { method: 'POST' }); commit(updated.current_version.schema_json); setNotice('AI edit accepted as a new version'); }
+        } catch (issue) { setError(issue.message); }
+        finally { setAiBusy(false); }
+    }
     async function loadResponses(query = '') {
         try { const value = await api(`/api/forms/${publicId}/submissions?search=${encodeURIComponent(query)}`); setResponses(value); setMode('responses'); }
         catch (issue) { setError(issue.message); }
@@ -125,6 +138,7 @@ export function MandatoryBuilder({ publicId }) {
             <input value={schema.form.title} onChange={(event) => patchForm({ title: event.target.value })} className="min-w-64 bg-transparent text-center text-xl font-bold outline-none" />
             <div className="flex flex-wrap gap-2">
                 <button onClick={() => loadResponses()} className="rounded-lg border border-slate-700 px-3 py-2">Responses</button>
+                <button disabled={aiBusy} onClick={editWithAi} className="rounded-lg border border-cyan-500 px-3 py-2 text-cyan-300">{aiBusy ? 'AI working…' : 'Edit with AI'}</button>
                 <button onClick={() => setMode(mode === 'json' ? 'builder' : 'json')} className="rounded-lg border border-slate-700 px-3 py-2">{mode === 'json' ? 'Builder' : 'JSON'}</button>
                 <button onClick={save} className="rounded-lg bg-slate-700 px-4 py-2 font-bold">Save draft</button>
                 <button onClick={publish} className="rounded-lg bg-cyan-400 px-4 py-2 font-bold text-slate-950">Publish</button>

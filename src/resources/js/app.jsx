@@ -17,6 +17,16 @@ async function api(path, options = {}) {
     return body;
 }
 
+async function finishAi(request) {
+    let current = request;
+    for (let attempt = 0; attempt < 30 && !['succeeded', 'failed'].includes(current.status); attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        current = await api(`/api/ai-requests/${request.public_id}`);
+    }
+    if (current.status !== 'succeeded') throw new Error(current.error_message || 'AI generation did not complete.');
+    return api(`/api/ai-requests/${current.public_id}/accept`, { method: 'POST' });
+}
+
 function blankValidation() {
     return { min_length: null, max_length: null, min: null, max: null, email: false, url: false, numeric: false, regex: null, allowed_file_types: [], max_file_size_kb: null };
 }
@@ -48,8 +58,9 @@ function Dashboard() {
     const [data, setData] = useState(null); const [error, setError] = useState('');
     useEffect(() => { api('/api/forms').then(setData).catch((e) => setError(e.message)); }, []);
     async function createForm() { try { const form = await api('/api/forms', { method: 'POST', body: JSON.stringify({ schema: blankSchema() }) }); window.location.assign(`/forms/${form.public_id}`); } catch (e) { setError(e.message); } }
+    async function generateForm() { const prompt = window.prompt('Describe the form you want to generate'); if (!prompt) return; setError(''); try { const request = await api('/api/forms/ai/generate', { method: 'POST', body: JSON.stringify({ prompt }) }); const form = await finishAi(request); window.location.assign(`/forms/${form.public_id}`); } catch (e) { setError(e.message); } }
     async function logout() { await api('/logout', { method: 'POST' }); window.location.assign('/login'); }
-    return <main className="min-h-screen bg-slate-950 p-6 text-slate-100"><div className="mx-auto max-w-6xl"><header className="flex items-center justify-between py-6"><div><Brand/><h1 className="mt-2 text-3xl font-bold">{data?.tenant?.name ?? 'Your forms'}</h1></div><div className="flex gap-3"><button onClick={createForm} className="rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950">New form</button><button onClick={logout} className="rounded-xl border border-slate-700 px-4">Log out</button></div></header>{error && <p className="text-rose-400">{error}</p>}<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data?.forms?.map((form) => <a key={form.public_id} href={`/forms/${form.public_id}`} className="rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-cyan-500"><div className="flex justify-between"><h2 className="font-bold">{form.title}</h2><span className="rounded-full bg-slate-800 px-2 py-1 text-xs uppercase">{form.status}</span></div><p className="mt-6 text-sm text-slate-400">Version {form.current_version?.version_number ?? 1}</p></a>)}</div>{data?.forms?.length === 0 && <p className="mt-16 text-center text-slate-400">Create your first form to begin.</p>}</div></main>;
+    return <main className="min-h-screen bg-slate-950 p-6 text-slate-100"><div className="mx-auto max-w-6xl"><header className="flex items-center justify-between py-6"><div><Brand/><h1 className="mt-2 text-3xl font-bold">{data?.tenant?.name ?? 'Your forms'}</h1></div><div className="flex gap-3"><button onClick={generateForm} className="rounded-xl border border-cyan-400 px-5 py-3 font-bold text-cyan-300">Generate with AI</button><button onClick={createForm} className="rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950">New form</button><button onClick={logout} className="rounded-xl border border-slate-700 px-4">Log out</button></div></header>{error && <p className="text-rose-400">{error}</p>}<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{data?.forms?.map((form) => <a key={form.public_id} href={`/forms/${form.public_id}`} className="rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-cyan-500"><div className="flex justify-between"><h2 className="font-bold">{form.title}</h2><span className="rounded-full bg-slate-800 px-2 py-1 text-xs uppercase">{form.status}</span></div><p className="mt-6 text-sm text-slate-400">Version {form.current_version?.version_number ?? 1}</p></a>)}</div>{data?.forms?.length === 0 && <p className="mt-16 text-center text-slate-400">Create your first form to begin.</p>}</div></main>;
 }
 
 export function Builder({ publicId }) {
