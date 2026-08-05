@@ -1512,6 +1512,45 @@ Native JSON preserves the single-document source of truth and gives database-lev
 - Semantic validation compatibility rules and error representation.
 - Form/version migrations and persistence service.
 
+## Decision 039: Deadline-Driven Manual Form MVP
+
+**Date:** 2026-08-05
+
+**Milestone:** Cross-milestone delivery reprioritization
+
+**Status:** User-authorized and implemented.
+
+**Decision:** Prioritize one tested end-to-end manual form workflow for next-morning delivery and defer AI, imports, advanced Part D behavior, and secondary builder features.
+
+**Context**
+
+The full nine-milestone assignment could not be completed responsibly within the remaining day. The user explicitly authorized autonomous routine decisions and requested that lower-priority features be omitted so a working application could be published and deployed quickly.
+
+**Rationale**
+
+The assignment's own priority order places the manual builder and public submission workflow before AI, imports, and advanced features. A real vertical slice is more demonstrable and defensible than partially implemented features across every part.
+
+**Implemented scope**
+
+- Personal tenant registration and tenant-isolated form access.
+- Strict shared contract and bounded semantic schema validation.
+- Append-only canonical versions with separate current and published pointers.
+- Compact React builder covering all twelve field types through click-to-add and reorder controls.
+- Public rendering, server validation, exact-version submissions, and response review.
+- Published demo fixtures and a production-tested Railway Docker image.
+
+**Accepted trade-offs**
+
+- Drag-and-drop, multi-step editor controls, complete field configuration, complete validation compilation, files, CSV, search, AI, imports, conditional logic, rollback UI, and advanced tenancy remain unfinished.
+- The first membership is used as active tenant context until tenant switching is implemented.
+- The reduced Railway deployment runs database sessions/cache and synchronous queues and does not deploy FastAPI.
+
+**Consequences**
+
+- All deferred requirements are listed explicitly in README rather than represented by placeholders.
+- The MVP remains migration-safe, schema-driven, tenant-scoped, tested against MySQL, and extendable through the existing version boundary.
+- The next work must harden validation and builder controls before starting AI or import features.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
@@ -1578,7 +1617,7 @@ See the accepted trade-offs recorded with each decision.
 
 ## Known Limitations
 
-The project is currently in Milestone 0 and has not yet been scaffolded.
+See Decision 039 and README's **Known limitations / unfinished work** section. The manual form MVP is implemented; AI, imports, advanced Part D features, and several secondary builder/submission capabilities are intentionally unfinished due to the delivery deadline.
 
 ## What I Would Build With Two More Weeks
 
