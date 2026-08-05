@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "form": {
+    "title": "Customer Feedback",
+    "description": "Tell us about your experience.",
+    "submit_label": "Send feedback",
+    "success_message": "Thank you for helping us improve."
+  },
+  "steps": [{
+    "id": "step_feedback",
+    "title": "Your feedback",
+    "description": null,
+    "sections": [{
+      "id": "section_experience",
+      "title": "Experience",
+      "description": null,
+      "fields": [{
+        "id": "field_rating",
+        "type": "rating",
+        "key": "overall_rating",
+        "label": "Overall rating",
+        "placeholder": null,
+        "help_text": "Choose a rating from 1 to 5.",
+        "default": null,
+        "required": true,
+        "options": [],
+        "validation": {
+          "min_length": null,
+          "max_length": null,
+          "min": 1,
+          "max": 5,
+          "email": false,
+          "url": false,
+          "numeric": true,
+          "regex": null,
+          "allowed_file_types": [],
+          "max_file_size_kb": null
+        }
+      }]
+    }]
+  }],
+  "conditions": [],
+  "settings": {
+    "show_progress": true,
+    "allow_multiple_submissions": true
+  }
+}

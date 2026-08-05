@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "form": {
+    "title": "Invalid form",
+    "description": null,
+    "submit_label": "Submit",
+    "success_message": "Thank you.",
+    "unexpected": true
+  },
+  "steps": [],
+  "conditions": [],
+  "settings": {
+    "show_progress": true,
+    "allow_multiple_submissions": true
+  }
+}

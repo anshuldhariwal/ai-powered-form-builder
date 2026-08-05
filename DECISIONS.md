@@ -1417,6 +1417,50 @@ Recursive object-key sorting and stable encoding cover the product's equality re
 - Form schema v1 structure and normalization defaults.
 - JSON storage representation and size limits.
 
+## Decision 037: Strict Fully Normalized Form Schema v1
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved and implemented at the shared-contract boundary; semantic validation remains pending its limits decision.
+
+**Approved option:** Option A - use JSON Schema Draft 2020-12, require the complete v1 shape, reject unknown properties, and persist explicit defaults rather than sparse objects.
+
+**Context**
+
+Laravel, React, FastAPI, imports, and public submission validation need one unambiguous representation. Sparse or extensible objects would require each runtime to reproduce defaults identically before checksumming and persistence.
+
+**Options considered**
+
+- Option A: Strict closed objects with all normalized properties required.
+- Option B: Sparse objects whose missing properties are filled by a normalizer.
+- Option C: Permissive objects that preserve unknown properties.
+
+**Rationale**
+
+A fully explicit schema makes the shared JSON Schema the authoritative contract and removes defaulting drift across languages. Unknown client or AI output fails visibly.
+
+**Accepted trade-offs**
+
+- Persisted documents are more verbose.
+- Contract evolution requires a new schema version or an explicit compatible migration.
+- Cross-field compatibility, reference integrity, uniqueness, regex safety, and count limits remain semantic-validator responsibilities.
+
+**Consequences**
+
+- Every top-level, form, step, section, field, option, validation, condition, and settings object is closed with `additionalProperties: false`.
+- Nullable presentation values and inactive validation values remain present explicitly.
+- The twelve approved field types, condition operators, and actions are enumerated in the shared contract.
+- Laravel and FastAPI must load the root contract artifact rather than maintaining independent allowed-value lists.
+- Stable identifiers are bounded non-empty strings in v1; client generation details remain a Milestone 2 decision.
+
+**Follow-up decisions**
+
+- Semantic validation compatibility rules and schema limits.
+- JSON column representation and maximum persisted size.
+- Field-key and stable-ID generation behavior.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.

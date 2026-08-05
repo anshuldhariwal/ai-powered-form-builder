@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "form": {
+    "title": "Internship Application",
+    "description": "Apply for the summer internship programme.",
+    "submit_label": "Submit application",
+    "success_message": "Your application has been received."
+  },
+  "steps": [{
+    "id": "step_personal",
+    "title": "Personal information",
+    "description": null,
+    "sections": [{
+      "id": "section_contact",
+      "title": "Contact details",
+      "description": null,
+      "fields": [{
+        "id": "field_full_name",
+        "type": "text",
+        "key": "full_name",
+        "label": "Full name",
+        "placeholder": "Enter your full name",
+        "help_text": null,
+        "default": null,
+        "required": true,
+        "options": [],
+        "validation": {
+          "min_length": 2,
+          "max_length": 120,
+          "min": null,
+          "max": null,
+          "email": false,
+          "url": false,
+          "numeric": false,
+          "regex": null,
+          "allowed_file_types": [],
+          "max_file_size_kb": null
+        }
+      }]
+    }]
+  }],
+  "conditions": [],
+  "settings": {
+    "show_progress": true,
+    "allow_multiple_submissions": false
+  }
+}

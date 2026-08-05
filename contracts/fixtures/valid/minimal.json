@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "form": {
+    "title": "Blank form",
+    "description": null,
+    "submit_label": "Submit",
+    "success_message": "Thank you for your response."
+  },
+  "steps": [
+    {
+      "id": "step_main",
+      "title": "Form",
+      "description": null,
+      "sections": [
+        {
+          "id": "section_main",
+          "title": "Questions",
+          "description": null,
+          "fields": []
+        }
+      ]
+    }
+  ],
+  "conditions": [],
+  "settings": {
+    "show_progress": true,
+    "allow_multiple_submissions": true
+  }
+}

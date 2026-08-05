@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "form": {
+    "title": "Invalid form",
+    "description": null,
+    "submit_label": "Submit",
+    "success_message": "Thank you."
+  },
+  "steps": [
+    {
+      "id": "step_main",
+      "title": "Form",
+      "description": null,
+      "sections": [
+        {
+          "id": "section_main",
+          "title": "Questions",
+          "description": null,
+          "fields": [
+            {
+              "id": "field_invalid",
+              "type": "unsupported",
+              "key": "invalid",
+              "label": "Invalid",
+              "placeholder": null,
+              "help_text": null,
+              "default": null,
+              "required": false,
+              "options": [],
+              "validation": {
+                "min_length": null,
+                "max_length": null,
+                "min": null,
+                "max": null,
+                "email": false,
+                "url": false,
+                "numeric": false,
+                "regex": null,
+                "allowed_file_types": [],
+                "max_file_size_kb": null
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "conditions": [],
+  "settings": {
+    "show_progress": true,
+    "allow_multiple_submissions": true
+  }
+}
