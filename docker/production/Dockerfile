@@ -31,11 +31,14 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-
 
 COPY src/ ./
 COPY contracts/ /var/www/contracts/
+COPY docker/production/start.sh /usr/local/bin/formforge-start
 COPY --from=frontend /app/public/build ./public/build
 
 RUN composer dump-autoload --no-dev --optimize --no-interaction \
     && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && sed -i 's/\r$//' /usr/local/bin/formforge-start \
+    && chmod +x /usr/local/bin/formforge-start \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80
-CMD ["sh", "-c", "php artisan db:seed --force && rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_event.conf /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_worker.conf && exec apache2-foreground"]
+CMD ["formforge-start"]
