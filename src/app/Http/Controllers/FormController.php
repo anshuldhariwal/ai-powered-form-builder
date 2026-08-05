@@ -7,6 +7,7 @@ use App\Services\Forms\FormService;
 use App\Services\Tenancy\CurrentTenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormController extends Controller
 {
@@ -51,9 +52,48 @@ class FormController extends Controller
     public function submissions(Request $request, string $publicId, CurrentTenant $currentTenant): JsonResponse
     {
         $form = $this->ownedForm($request, $publicId, $currentTenant);
-        $submissions = $form->submissions()->latest('submitted_at')->paginate(25);
+        $submissions = $form->submissions()
+            ->when($request->string('search')->isNotEmpty(), fn ($query) => $query->where('search_text', 'like', '%'.$request->string('search')->value().'%'))
+            ->latest('submitted_at')
+            ->paginate(min(100, max(1, $request->integer('per_page', 25))));
 
         return response()->json($submissions);
+    }
+
+    public function submission(Request $request, string $publicId, string $submissionId, CurrentTenant $currentTenant): JsonResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+
+        return response()->json($form->submissions()->with('version:id,version_number')->where('public_id', $submissionId)->firstOrFail());
+    }
+
+    public function export(Request $request, string $publicId, CurrentTenant $currentTenant): StreamedResponse
+    {
+        $form = $this->ownedForm($request, $publicId, $currentTenant);
+        $keys = [];
+        foreach ($form->versions()->get() as $version) {
+            foreach ($version->schema_json['steps'] as $step) {
+                foreach ($step['sections'] as $section) {
+                    foreach ($section['fields'] as $field) {
+                        if ($field['type'] !== 'heading') {
+                            $keys[$field['key']] = true;
+                        }
+                    }
+                }
+            }
+        }
+        $keys = array_keys($keys);
+
+        return response()->streamDownload(function () use ($form, $keys): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['submission_id', 'submitted_at', ...$keys]);
+            $form->submissions()->oldest('id')->chunkById(500, function ($submissions) use ($handle, $keys): void {
+                foreach ($submissions as $submission) {
+                    fputcsv($handle, [$submission->public_id, (string) $submission->submitted_at, ...array_map(fn ($key) => is_array($submission->data_json[$key] ?? null) ? json_encode($submission->data_json[$key]) : $submission->data_json[$key] ?? '', $keys)]);
+                }
+            });
+            fclose($handle);
+        }, $form->slug.'-responses.csv', ['Content-Type' => 'text/csv']);
     }
 
     private function ownedForm(Request $request, string $publicId, CurrentTenant $currentTenant): Form

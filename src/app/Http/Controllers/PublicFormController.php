@@ -6,6 +6,7 @@ use App\Enums\FormStatus;
 use App\Models\Form;
 use App\Models\FormSubmission;
 use App\Models\FormVersion;
+use App\Services\Forms\SubmissionValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -24,7 +25,7 @@ class PublicFormController extends Controller
         ]);
     }
 
-    public function store(Request $request, string $tenantSlug, string $formSlug): JsonResponse
+    public function store(Request $request, string $tenantSlug, string $formSlug, SubmissionValidator $validator): JsonResponse
     {
         $form = $this->publishedForm($tenantSlug, $formSlug);
         /** @var FormVersion $version */
@@ -35,44 +36,7 @@ class PublicFormController extends Controller
             throw ValidationException::withMessages(['answers' => 'Answers must be an object.']);
         }
 
-        $errors = [];
-        $allowed = [];
-        foreach ($schema['steps'] as $step) {
-            foreach ($step['sections'] as $section) {
-                foreach ($section['fields'] as $field) {
-                    if ($field['type'] === 'heading') {
-                        continue;
-                    }
-                    $key = $field['key'];
-                    $allowed[$key] = true;
-                    $value = $answers[$key] ?? null;
-                    if ($field['required'] && ($value === null || $value === '' || $value === [])) {
-                        $errors[$key] = "{$field['label']} is required.";
-                    }
-                    if ($value !== null && $value !== '') {
-                        if ($field['type'] === 'email' && filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
-                            $errors[$key] = "{$field['label']} must be a valid email.";
-                        }
-                        if ($field['type'] === 'number' && ! is_numeric($value)) {
-                            $errors[$key] = "{$field['label']} must be a number.";
-                        }
-                        if (in_array($field['type'], ['select', 'radio'], true) && ! in_array($value, array_column($field['options'], 'value'), true)) {
-                            $errors[$key] = "{$field['label']} has an invalid selection.";
-                        }
-                    }
-                }
-            }
-        }
-        foreach (array_keys($answers) as $key) {
-            if (! isset($allowed[$key])) {
-                $errors[$key] = 'Unknown field.';
-            }
-        }
-        if ($errors !== []) {
-            throw ValidationException::withMessages($errors);
-        }
-
-        $clean = array_intersect_key($answers, $allowed);
+        $clean = $validator->validate($schema, $answers);
         $submission = FormSubmission::create([
             'form_id' => $form->id,
             'form_version_id' => $form->published_version_id,
