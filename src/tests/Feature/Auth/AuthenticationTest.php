@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\TenantRole;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -20,6 +22,36 @@ test('a user can register through the JSON endpoint', function () {
     $response->assertSuccessful();
     $this->assertAuthenticated();
     $this->assertDatabaseHas('users', ['email' => 'test@example.com']);
+    $this->assertDatabaseHas('tenants', [
+        'name' => "Test User's Workspace",
+        'slug' => 'test-users-workspace',
+    ]);
+    $this->assertDatabaseHas('tenant_user', [
+        'user_id' => User::where('email', 'test@example.com')->value('id'),
+        'role' => TenantRole::Owner->value,
+    ]);
+});
+
+test('registration resolves colliding personal tenant slugs', function () {
+    Tenant::factory()->create(['slug' => 'shared-names-workspace']);
+
+    $this->withSession(['_token' => CSRF_TOKEN])
+        ->withHeader('X-CSRF-TOKEN', CSRF_TOKEN)
+        ->postJson('/register', [
+            'name' => 'Shared Name',
+            'email' => 'shared@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertSuccessful();
+
+    $slug = User::where('email', 'shared@example.com')
+        ->firstOrFail()
+        ->tenants()
+        ->value('slug');
+
+    expect($slug)
+        ->toStartWith('shared-names-workspace-')
+        ->toHaveLength(31);
 });
 
 test('a user can log in and log out through JSON endpoints', function () {

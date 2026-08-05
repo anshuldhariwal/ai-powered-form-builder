@@ -7,12 +7,22 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use LogicException;
 
 #[Fillable(['name', 'slug'])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::updating(function (Tenant $tenant): void {
+            if ($tenant->isDirty('slug')) {
+                throw new LogicException('Tenant slugs are immutable.');
+            }
+        });
+    }
 
     /**
      * @return BelongsToMany<User, $this, TenantMembership>

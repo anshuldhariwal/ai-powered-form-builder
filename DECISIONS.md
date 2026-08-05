@@ -1243,6 +1243,48 @@ Bigint keys keep MySQL joins, foreign keys, and composite indexes compact and re
 - Form slug and public URL uniqueness.
 - Route model binding and serialization details when public endpoints are introduced.
 
+## Decision 033: Immutable Scoped Slugs for Public Form URLs
+
+**Date:** 2026-08-05
+
+**Milestone:** 1 - Core Domain, Shared Schema, and Tenancy
+
+**Status:** Approved; tenant behavior implemented, with the form index and route pending the form-domain decisions.
+
+**Approved option:** Option A - use globally unique tenant slugs and tenant-scoped form slugs, generate readable values with a short ULID-derived collision suffix, keep them immutable, and publish forms at `/f/{tenantSlug}/{formSlug}`.
+
+**Context**
+
+Registration must provision a personal tenant, and the planned public form route contains both tenant and form slugs. Their uniqueness and mutation rules must preserve links once forms are published.
+
+**Options considered**
+
+- Option A: Immutable readable slugs, scoped appropriately, with collision suffixes.
+- Option B: Editable readable slugs plus redirect history.
+- Option C: Public URLs containing only form ULIDs.
+
+**Rationale**
+
+Immutable scoped slugs keep published URLs readable and stable without introducing redirect infrastructure. A database unique constraint remains the authority, while a short ULID suffix resolves collisions safely.
+
+**Accepted trade-offs**
+
+- Renaming a tenant or form does not update its URL.
+- Colliding names receive a less concise suffix.
+- Slugs are identifiers and never substitute for publication checks or authorization.
+
+**Consequences**
+
+- Tenant slugs are globally unique and immutable.
+- Form slugs will be unique by `(tenant_id, slug)` and immutable.
+- Registration creates a readable personal-workspace tenant slug and retries collisions inside its transaction.
+- Public form resolution will require both slug values and return only published forms.
+
+**Follow-up decisions**
+
+- Form/version table relationship.
+- Public route binding and publication behavior.
+
 ## Why a Separate FastAPI Service
 
 Pending Milestone 0 approval.
